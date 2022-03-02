@@ -1,15 +1,18 @@
 import React,{useState, useEffect} from 'react';
-import { Container, PoolTabs, PoolTab, PoolTabList, PoolTabPanel } from '../styles/pool';
-import { LiquidityPool, SpanContainer, PercBlock, Per, FirstInputBox, InputContainer, ButtonContainer, InputPrice, Button, IFButton, ButtonRem, P } from '../styles/pool'
+
+/* import Style of Tab Card */
+import { LiquidityPool, SpanContainer, PercBlock, Per, FirstInputBox, InputContainer, ButtonContainer, InputPrice, Button, IFButton, ButtonRem, P, Container, PoolTabs, PoolTab, PoolTabList, PoolTabPanel } from '../styles/pool'
+
+//import web3
 import Web3 from "web3";
-import { Pair } from '../contracts/Pair';
-import { Router_address } from '../contracts/Router';
-import { TokenA_add } from '../contracts/TokenA';
-import { TokenB_add } from '../contracts/TokenB';
-import { Pair_ } from "../logic/addLiq";
-import { Router_ } from "../logic/addLiq";
-import { TokenA_ } from "../logic/addLiq";
-import { TokenB_ } from "../logic/addLiq";
+
+// import addresses
+import { Router_address, TokenA_add, TokenB_add   } from '../contracts/addresses';
+
+//import instances
+import { Pair_, Router_, TokenA_, TokenB_  } from "../logic/instance";
+
+import {getTokenABalance, getTokenBBalance, getReservesFromPair, approveLpToken, removeLiquidityFromPool} from "../logic/methods"
 
 
 
@@ -22,6 +25,7 @@ interface walletProp {
 export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => {
   
   const web3 = new Web3(Web3.givenProvider);
+
   const [price1, setPrice1] = useState<any>(0);
   const [price2, setprice2] = useState<any>(0);
 
@@ -33,7 +37,7 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
   const [BUSDreserve, setBUSDreserve] = useState<string>(""); //Total reserve BUSD token in Pair contract
   const [BUSTreserve, setBUSTreserve] = useState<string>("");
 
-  const [btntrigger, setTrigger] = useState(true);
+   const [btntrigger, setTrigger] = useState(true);
 
   const [balanceToken1_LP, setbalancebyLP1] = useState(""); //initial TOken to be get
   const [balanceToken2_LP, setbalancebyLP2] = useState("");
@@ -77,37 +81,61 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
   // To fetch account details ie,. balance
   async function getInitialBalance() {
     
-    const [admin, _] = await web3.eth.getAccounts();
+    const [admin] = await web3.eth.getAccounts();
 
-    let longval = Number(
-      web3.utils.fromWei(await TokenA_.methods.balanceOf(admin).call(), "ether")
-    );
-    let bal1 = Math.round(longval * 1000) / 1000;
+    // let longval = Number(
+    //   web3.utils.fromWei(await TokenA_.methods.balanceOf(admin).call(), "ether")
+    // );
+    let tokenOne : any = Number(await getTokenABalance(admin));
+    tokenOne = Number(tokenOne).toFixed(4)
 
-    let longval2 = Number(
-      web3.utils.fromWei(await TokenB_.methods.balanceOf(admin).call(), "ether")
-    );
-    let bal2 = Math.round(longval2 * 1000) / 1000;
+   // console.log(tokenOne);
+    //Number(bustBalance).toFixed(4)
 
-    if (bal1 == 0 || bal2 == 0) {
+    // let bal1 = Math.round(longval * 1000) / 1000;
+   // let token_one = Math.round(tokenOne * 1000) / 1000;
+
+    //console.log(Number(tokenOne).toFixed(4))
+
+
+
+    // let longval2 = Number(
+    //   web3.utils.fromWei(await TokenB_.methods.balanceOf(admin).call(), "ether")
+    // );
+    // let bal2 = Math.round(longval2 * 1000) / 1000;
+
+    let tokenTwo : any = Number(await getTokenBBalance(admin));
+    tokenTwo = Number(tokenTwo).toFixed(4)
+
+    if (tokenOne === 0 || tokenTwo === 0) {
       setFundBtn(true);
     }
 
+    //get reserves from the contract to calc price of each token
+
+    let reserves = await getReservesFromPair();
+    let resA = reserves._reserve0;
+    let resB = reserves._reserve1;
+
+    setBUSDreserve(resA);
+    setBUSTreserve(resB);
+
     const LpToken_amount = await Pair_.methods.balanceOf(admin).call();
+    // console.log(LpToken_amount);
     
     if (LpToken_amount != 0) {
       const supply = await Pair_.methods.totalSupply().call();
-      //console.log("suuply", supply, typeof(supply));
+      // console.log("supply", supply);
 
       let inEth = Number(web3.utils.fromWei(LpToken_amount, "ether"));
       let LP: string = inEth.toFixed(4).toString();
 
-      let c = await Pair_.methods.getReserves().call();
-      let resA = c._reserve0;
-      let resB = c._reserve1;
+      // let c = await Pair_.methods.getReserves().call();
+      // let resA = c._reserve0;
+      // let resB = c._reserve1;
 
-      setBUSDreserve(resA);
-      setBUSTreserve(resB);
+      // setBUSDreserve(resA);
+      // setBUSTreserve(resB);
 
       setTokenBalance(LP);
       setLpRemoved(LP);
@@ -119,14 +147,14 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
       setTokenBalance("");
     }
    // console.log(bal1);
-    setbalance1(bal1);
-    setbalance2(bal2);
+    setbalance1(tokenOne);
+    setbalance2(tokenTwo);
   }
 
   // Step 1 get price of both tokens by calculating  reserve tokens
   async function getBUSTAmount(e: React.ChangeEvent<HTMLInputElement>) {
     setPrice1(e.currentTarget.value);
-    if (e.currentTarget.value != "") {
+    if (e.currentTarget.value !== "") {
       let price1_wei = web3.utils.toWei(
         e.currentTarget.value.toString(),
         "ether"
@@ -134,6 +162,7 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
       let amountB = await Router_.methods
         .quote(price1_wei, BUSDreserve, BUSTreserve)
         .call();
+     
       let amountB_Eth = web3.utils.fromWei(amountB.toString(), "ether");
       setprice2(Number(amountB_Eth));
     } else {
@@ -143,7 +172,7 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
 
   async function getBUSDAmount(e: React.ChangeEvent<HTMLInputElement>) {
     setprice2(e.currentTarget.value);
-    if (e.currentTarget.value != "") {
+    if (e.currentTarget.value !== "") {
       let price2_wei = web3.utils.toWei(
         e.currentTarget.value.toString(),
         "ether"
@@ -197,7 +226,7 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
       let priceB = web3.utils.toWei(price2.toString(), "ether");
       let priceA = web3.utils.toWei(price1.toString(), "ether");
       let DeadLine = (Math.round(new Date().getTime() / 1000) + 900).toString();
-      const [admin, _] = await web3.eth.getAccounts();
+      const [admin] = await web3.eth.getAccounts();
 
       const MinBUSD = price1 - (price1 * 1) / 200;
       const MinBUST = price2 - (price2 * 1) / 200;
@@ -269,17 +298,26 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
   async function approveLP() {
     
     try {
-      const [admin, _] = await web3.eth.getAccounts();
+      const [admin] = await web3.eth.getAccounts();
       setRemText("Approving BUST-LP..");
       setProcessing(true);
       const LPtoBeRemoved = web3.utils.toWei(LPRemoved, "ether");
-      await Pair_.methods
-        .approve(Router_address, LPtoBeRemoved)
-        .send({ from: admin })
-        .then(() => {
-          setRemText("Removing..");
-          removeLiquidity();
-        });
+      // await Pair_.methods
+      //   .approve(Router_address, LPtoBeRemoved)
+      //   .send({ from: admin })
+      //   .then(() => {
+      //     setRemText("Removing..");
+      //     removeLiquidity();
+      //   });
+      let approvalStatus = await approveLpToken(LPtoBeRemoved);
+
+      if(approvalStatus) {
+
+       // alert("Lp token approved")
+        removeLiquidity();
+      // setRemText("Remove");
+      // setProcessing(false);
+      }
     } catch (err) {
       if (err) {
         setProcessing(false);
@@ -288,8 +326,8 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
       }
     }
   }
-   // Remove Liquidity and get back your tokens
-   async function removeLiquidity() {
+
+  async function removeLiquidity() {
     try {
       const [admin] = await web3.eth.getAccounts();
       let DeadLine = (Math.round(new Date().getTime() / 1000) + 2*60).toString();
@@ -319,7 +357,7 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
           admin,
           DeadLine
         )
-        .send({ from: admin })
+        .send({ from: admin, gas: "2000000" })
         .then(() => {
           setProcessing(false);
           setRemText("Approve");
@@ -330,11 +368,10 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
     } catch (error) {
       if (error) {
         setProcessing(false);
-        setRemText("Approve");
+        setRemText("Failed");
       }
     }
   }
-
   
   return (
     <Container>
@@ -404,7 +441,7 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
               className="rmLq"
               onClick={() => {
                 getBalanceby_LP(100);
-                trigger();
+                trigger()
               }}
             >
              

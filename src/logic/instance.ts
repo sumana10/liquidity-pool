@@ -1,8 +1,6 @@
-import { Pair, Pair_Address } from "../contracts/Pair";
-import { Router, Router_address } from "../contracts/Router";
 import Web3 from "web3";
-import { TokenA_add,TokenA } from "../contracts/TokenA";
-import { TokenB, TokenB_add} from "../contracts/TokenB";
+import { Pair_Address, Router_address, TokenA_add, TokenB_add   } from '../contracts/addresses';
+import { Pair, Router, TokenA, TokenB  } from '../contracts/abi';
 
 const web3 = new Web3(Web3.givenProvider)
 
