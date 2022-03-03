@@ -83,27 +83,11 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
     
     const [admin] = await web3.eth.getAccounts();
 
-    // let longval = Number(
-    //   web3.utils.fromWei(await TokenA_.methods.balanceOf(admin).call(), "ether")
-    // );
+   
     let tokenOne : any = Number(await getTokenABalance(admin));
     tokenOne = Number(tokenOne).toFixed(4)
 
-   // console.log(tokenOne);
-    //Number(bustBalance).toFixed(4)
-
-    // let bal1 = Math.round(longval * 1000) / 1000;
-   // let token_one = Math.round(tokenOne * 1000) / 1000;
-
-    //console.log(Number(tokenOne).toFixed(4))
-
-
-
-    // let longval2 = Number(
-    //   web3.utils.fromWei(await TokenB_.methods.balanceOf(admin).call(), "ether")
-    // );
-    // let bal2 = Math.round(longval2 * 1000) / 1000;
-
+  
     let tokenTwo : any = Number(await getTokenBBalance(admin));
     tokenTwo = Number(tokenTwo).toFixed(4)
 
@@ -130,13 +114,7 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
       let inEth = Number(web3.utils.fromWei(LpToken_amount, "ether"));
       let LP: string = inEth.toFixed(4).toString();
 
-      // let c = await Pair_.methods.getReserves().call();
-      // let resA = c._reserve0;
-      // let resB = c._reserve1;
-
-      // setBUSDreserve(resA);
-      // setBUSTreserve(resB);
-
+    
       setTokenBalance(LP);
       setLpRemoved(LP);
       setSupply(Number(supply));
@@ -302,21 +280,14 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
       setRemText("Approving BUST-LP..");
       setProcessing(true);
       const LPtoBeRemoved = web3.utils.toWei(LPRemoved, "ether");
-      // await Pair_.methods
-      //   .approve(Router_address, LPtoBeRemoved)
-      //   .send({ from: admin })
-      //   .then(() => {
-      //     setRemText("Removing..");
-      //     removeLiquidity();
-      //   });
+     
       let approvalStatus = await approveLpToken(LPtoBeRemoved);
 
       if(approvalStatus) {
 
        // alert("Lp token approved")
         removeLiquidity();
-      // setRemText("Remove");
-      // setProcessing(false);
+     
       }
     } catch (err) {
       if (err) {
@@ -357,7 +328,7 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
           admin,
           DeadLine
         )
-        .send({ from: admin, gas: "2000000" })
+        .send({ from: admin })
         .then(() => {
           setProcessing(false);
           setRemText("Approve");
@@ -506,13 +477,10 @@ export const PoolCard: React.FC<walletProp> = ({ account, active, library }) => 
           </ButtonContainer>
 
           <br></br>
-          {/* <span>Or</span> */}
           <br></br>
-          {/* <Button>Supply</Button> */}
         </LiquidityPool>
   </PoolTabPanel>
   </PoolTabs>
   </Container>
   )
 }
-
